@@ -31,6 +31,7 @@ Keypad teclado = Keypad( makeKeymap(teclas), pinesfilas,  pinescolumnas, filas, 
 LiquidCrystal lcd(44, 43, 42, 41, 40, 39); //Inicializa la libreria y define los pines digitales para el LCD
 int t = 0;
 String vari[10];
+int tiempo = 10000;
 
 #define ETHNET_CS 10
 byte mac[] = {
@@ -72,14 +73,20 @@ void loop() {
   if (t == 0) {
     prestar();
   }
-  if (t == 0) {
+  if (t == 1) {
     devolver();
   }
   if (t == 2) {
-    registrarP();
+    asignarP();
   }
   if (t == 3) {
-    registrarI();
+    asignarI();
+  }
+  if (t == 4) {
+    listaPrestamosP();
+  }
+  if (t == 5) {
+    listaPrestamosI();
   }
 }
 
@@ -120,6 +127,27 @@ void php(String funcion) {
       cont++;
       aux = "";
     }
+    if (c == '{') {
+      cont = 0;
+      while (c != '}') {
+        c = client.read();
+        if (c == '(') {
+          while (c != ')') {
+            c = client.read();
+            aux = aux + c;
+          }
+          aux.replace(")", "");
+          if (cont % 2) {
+            Serial.println(aux + " ");
+            cont++;
+          } else {
+            Serial.print(aux + " ");
+            cont++;
+          }
+          aux = "";
+        }
+      }
+    }
     Serial.print(c);
   }
   if (!client.connected()) {
@@ -145,6 +173,7 @@ int numeros()                            //Funcion teclados
   val = k - 48;                           //Poner el valor de k menos 48 a val
   return val;
 }
+
 void imp(String a, String b, String c, String d ) {
   lcd.clear();
   lcd.setCursor((20 - a.length()) / 2, 0);            //Ubica el cursor en la fila 7 de la columna 0
@@ -157,40 +186,165 @@ void imp(String a, String b, String c, String d ) {
   lcd.print(d);
 }
 void prestar() {
-  imp("PONGA SU CARNÉ", "", "", "");
-  Serial.println("PONGA SU CARNÉ");
-  String uid = UID(5000);
-  if (uid != "tiempoAgotado") {
-    Serial.println(uid);
-    String f = "/EDocNomxUID.php?UID=";
-    uid = espaciosurl(uid);
-    Serial.println(f + uid);
-    php(f + uid);
-    Serial.println(vari[0]);
-    Serial.println(vari[1]);
-    f = "/APrest.php?Doc="+vari[0]+"&Ref=1&Cant=400&Prest=1";
-    Serial.println(f);
-    php(f);
-    
-  }
-  else {
-    Serial.println("TIEMPO AGOTADO");
-    return;
-  }
-
-
+  prestamos(1);
   return;
 }
 void devolver() {
-  imp("PONGA SU CARNÉ", "", "", "");
+  prestamos(0);
+  return;
 }
-void registrarP() {
-  imp("INGRESE CÉDULA", "Y", "PONGA SU CARNÉ", "");
+void asignarP() {
+  imp("PONGA EL CARNÉ", "", "", "");
+  Serial.println("PONGA EL CARNÉ");
+  String uid = UID(tiempo);
+  if (uid == "tiempoAgotado") {
+    Serial.println("TIEMPO AGOTADO");
+    return;
+  }
+  uid = espaciosurl(uid);
+  Serial.println("INGRESE LA CÉDULA");
+  String ced = secNum();
+  String f = "/AUIDDoc.php?Doc=" + ced + "&UID=" + uid;
+  Serial.println(f);
+  php(f);
+  Serial.println("----" + vari[0] + "----");
+  if (vari[0] == "0") {
+    Serial.println("DESEA SOBREESCRIBIR");
+    char k = teclado.getKey();
+    while (k != '#' && k != '*') {
+      k = teclado.getKey();
+    }
+    if (k == '#') {
+      f = "/AUIDDocO.php?Doc=" + ced + "&UID=" + uid;
+      php(f);
+    } else {
+      return;
+    }
+  } else if (vari[0] == "3") {
+    Serial.println("EL USUARIO NO EXISTE");
+  }
+
 }
-void registrarI() {
-  imp("INGRESE REFERENCIA", "Y", "PONGA SU TAG", "");
+void asignarI() {
+  imp("PONGA EL TAG", "", "", "");
+  Serial.println("PONGA EL TAG");
+  String uid = UID(tiempo);
+  if (uid == "tiempoAgotado") {
+    Serial.println("TIEMPO AGOTADO");
+    return;
+  }
+  uid = espaciosurl(uid);
+  Serial.println("INGRESE LA REFERENCIA");
+  String ref = secNum();
+  String f = "/AUIDRef.php?Ref=" + ref + "&UID=" + uid;
+  Serial.println(f);
+  php(f);
+  Serial.println("----" + vari[0] + "----");
+  if (vari[0] == "0") {
+    Serial.println("DESEA SOBREESCRIBIR");
+    char k = teclado.getKey();
+    while (k != '#' && k != '*') {
+      k = teclado.getKey();
+    }
+    if (k == '#') {
+      f = "/AUIDRefO.php?Ref=" + ref + "&UID=" + uid;
+      php(f);
+    } else {
+      return;
+    }
+  } else if (vari[0] == "3") {
+    Serial.println("EL ITEM NO EXISTE");
+  }
 }
 
+void prestamos(int p) {
+  imp("PONGA SU CARNÉ", "", "", "");
+  Serial.println("PONGA SU CARNÉ");
+  String uid = UID(tiempo);
+  if (uid == "tiempoAgotado") {
+    Serial.println("TIEMPO AGOTADO");
+    return;
+  }
+  Serial.println(uid);
+  String f = "/EDocNomxUID.php?UID=";
+  uid = espaciosurl(uid);
+  Serial.println(f + uid);
+  php(f + uid);
+  String doc = vari[0];
+  if (doc == "0") {
+    Serial.println("EL USUARIO NO EXISTE");
+    return;
+  }
+  String nom = vari[1];
+  Serial.println(doc);
+  Serial.println(nom);
+  Serial.println("PONGA EL ITEM:");
+  uid = UID(tiempo);
+  if (uid == "tiempoAgotado") {
+    Serial.println("TIEMPO AGOTADO");
+    return;
+  }
+  f = "/ERefNomxUID.php?UID=";
+  uid = espaciosurl(uid);
+  Serial.println(f + uid);
+  php(f + uid);
+  String ref = vari[0];
+  if (ref == "0") {
+    Serial.println("EL ITEM NO EXISTE");
+    return;
+  }
+  String nomr = vari[1];
+  Serial.println("Ingrese cantidad:");
+  String cant = secNum();
+  f = "/APrest.php?Doc=" + doc + "&Ref=" + ref + "&Cant=" + cant + "&Prest=" + p;
+  Serial.println(f);
+  php(f);
+  return;
+}
+void listaPrestamosP() {
+  imp("PONGA SU CARNÉ", "", "", "");
+  Serial.println("PONGA SU CARNÉ");
+  String uid = UID(tiempo);
+  if (uid == "tiempoAgotado") {
+    Serial.println("TIEMPO AGOTADO");
+    return;
+  }
+  Serial.println(uid);
+  String f = "/EDocNomxUID.php?UID=";
+  uid = espaciosurl(uid);
+  Serial.println(f + uid);
+  php(f + uid);
+  String doc = vari[0];
+  if (doc == "0") {
+    Serial.println("EL USUARIO NO EXISTE");
+    return;
+  }
+  f = "/EPrestxDoc.php?Doc=" + doc;
+  Serial.println(f);
+  php(f);
+}
+void listaPrestamosI() {
+  imp("PONGA SU CARNÉ", "", "", "");
+  Serial.println("PONGA EL TAG");
+  String uid = UID(tiempo);
+  if (uid == "tiempoAgotado") {
+    Serial.println("TIEMPO AGOTADO");
+    return;
+  }
+  Serial.println(uid);
+  String f = "/ERefNomxUID.php?UID=";
+  uid = espaciosurl(uid);
+  Serial.println(f + uid);
+  php(f + uid);
+  String ref = vari[0];
+  if (ref == "0") {
+    Serial.println("EL ITEM NO EXISTE");
+    return;
+  }
+  f = "/EPrestxRef.php?Ref=" + ref;
+  Serial.println(f);
+  php(f);
+}
 void setupEth() {
   spiSelect(ETHNET_CS);
   if (Ethernet.begin(mac) == 0) {
@@ -221,6 +375,45 @@ void spiSelect(int CS) {
   // enable the chip we want
   digitalWrite(CS, LOW);
 }
+
+String secNum() {
+  char k;//
+  char num[20];
+  int i = 0;
+  k = teclado.getKey();
+  bool salir = false;
+  while (!salir) {
+    if ((k == '\0') || (k == '*') || (k == 'A') || (k == 'C') || (k == 'D')) //Si no se oprime ninguna tecla
+    {
+      k = teclado.getKey();
+    }
+    else {
+      if (k == '#') {
+        Serial.print(k);
+        salir = true;
+      } else if (k == 'B') {
+        if (i > 0) {
+          i--;
+        }
+        k = teclado.getKey();
+      } else {
+        Serial.print(k);
+        num[i] = k;
+        i++;
+        k = teclado.getKey();
+      }
+
+    }
+  }
+  String ret;
+  for (int j = 0; j < i; j++) {
+    ret = ret + num[j];
+  }
+  Serial.println("---" + ret + "---");
+  return ret;
+}
+
+
 
 String UID(int tiempo) {
   spiSelect(SDA_DIO);
