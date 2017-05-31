@@ -68,33 +68,88 @@ void setup() {
 
 void loop() {
   Serial.println("entró");
-  bienvenida();
+  imp("SISTEMA DE PRESTAMOS", "1 - PRESTAMOS  ", "2 - ASIGNACIONES", "3 - CONSULTAS  ");
   t = numeros();
   Serial.println(t);
-  if (t == 0) {
-    prestar();
-  }
   if (t == 1) {
-    devolver();
+    prestamo();
   }
   if (t == 2) {
-    asignarP();
+    asignacion();
   }
   if (t == 3) {
-    asignarI();
-  }
-  if (t == 4) {
-    listaPrestamosP();
-  }
-  if (t == 5) {
-    listaPrestamosI();
+    consultas();
   }
 }
 
-void bienvenida() {
-  imp("", "SISTEMA DE PRESTAMOS", "", "");
+void prestamo() {
+  while (true) {
+    imp("---PRESTAMOS---", "1 - PRESTAR", "2 - DEVOLVER", "3 - REGRESAR");
+    int t = numeros();
+    if (t == 1) {
+      prestar();
+      break;
+    }
+    if (t == 2) {
+      devolver();
+      break;
+    }
+    if (t == 3) {
+      return;
+    }
+  }
 }
 
+void asignacion() {
+  while (true) {
+    imp("---ASIGNACIONES---", "1 - USUARIOS    ", "2 - REFERENCIAS", "3 - REGRESAR    ");
+    int t = numeros();
+    if (t == 1) {
+      asignarP();
+      break;
+    }
+    if (t == 2) {
+      asignarI();
+      break;
+    }
+    if (t == 3) {
+      return;
+    }
+  }
+}
+
+void consultas() {
+  while (true) {
+    imp("---CONSULTAS---", "1 - POR USUARIO  ", "2 - POR REFERENCIA", "3 - REGRESAR     ");
+    int t = numeros();
+    if (t == 1) {
+      listaPrestamosP();
+      break;
+    }
+    if (t == 2) {
+      listaPrestamosI();
+      break;
+    }
+    if (t == 3) {
+      return;
+    }
+  }
+}
+void advertencia(String ad) {
+  imp("", ad, "", "");
+  delay(400);
+  lcd.noBacklight();
+  delay(400);
+  lcd.backlight();
+  delay(400);
+  lcd.noBacklight();
+  delay(400);
+  lcd.backlight();
+  delay(400);
+  lcd.noBacklight();
+  delay(400);
+  lcd.backlight();
+}
 void php(String funcion) {
   spiSelect(ETHNET_CS);
   if (client.connect(server, 80)) {
@@ -193,77 +248,119 @@ void devolver() {
   return;
 }
 void asignarP() {
-  imp("PONGA EL CARNÉ", "", "", "");
+  imp("", "PONGA EL CARNE", "", "");
   Serial.println("PONGA EL CARNÉ");
   String uid = UID(tiempo);
   if (uid == "tiempoAgotado") {
+    advertencia("TIEMPO AGOTADO...");
     Serial.println("TIEMPO AGOTADO");
     return;
   }
+  imp("", "GRACIAS", "", "");
+  delay(500);
   uid = espaciosurl(uid);
-  Serial.println("INGRESE LA CÉDULA");
-  String ced = secNum(0, 0);
+  imp("INGRESE EL DOCUMENTO", "", "# - CONTINUAR", "B - BORRAR");
+  Serial.println("INGRESE EL DOCUMENTO");
+  String ced = secNum(4, 1);
+  imp("", "GRACIAS", "", "");
   String f = "/AUIDDoc.php?Doc=" + ced + "&UID=" + uid;
   Serial.println(f);
   php(f);
   Serial.println("----" + vari[0] + "----");
   if (vari[0] == "0") {
+    imp("DESEA SOBREESCRIBIR", "# - SI", "* - NO", "");
     Serial.println("DESEA SOBREESCRIBIR");
     char k = teclado.getKey();
     while (k != '#' && k != '*') {
       k = teclado.getKey();
     }
+    imp("", "GRACIAS", "", "");
     if (k == '#') {
       f = "/AUIDDocO.php?Doc=" + ced + "&UID=" + uid;
       php(f);
+      if (vari[0] == "1"||vari[0] == "0") {
+        imp("", "REGISTRO EXITOSO!", "", "");
+        delay(800);
+      } else {
+        imp("", "PROBLEMA EN SERVIDOR", "", "");
+        delay(800);
+      }
     } else {
       return;
     }
   } else if (vari[0] == "3") {
+    advertencia("EL USUARIO NO EXISTE");
     Serial.println("EL USUARIO NO EXISTE");
+  } else if (vari[0] == "1") {
+    imp("", "REGISTRO EXITOSO!", "", "");
+    delay(800);
+  } else {
+    imp("", "PROBLEMA EN SERVIDOR", "", "");
+    delay(800);
   }
 
 }
 void asignarI() {
-  imp("PONGA EL TAG", "", "", "");
+  imp("", "PONGA EL TAG", "", "");
   Serial.println("PONGA EL TAG");
   String uid = UID(tiempo);
   if (uid == "tiempoAgotado") {
+    advertencia("TIEMPO AGOTADO...");
     Serial.println("TIEMPO AGOTADO");
     return;
   }
+  imp("", "GRACIAS", "", "");
   uid = espaciosurl(uid);
+  imp("INGRESE REFERENCIA", "", "# - CONTINUAR", "B - BORRAR");
   Serial.println("INGRESE LA REFERENCIA");
-  String ref = secNum(0, 0);
+  String ref = secNum(4, 1);
   String f = "/AUIDRef.php?Ref=" + ref + "&UID=" + uid;
   Serial.println(f);
   php(f);
   Serial.println("----" + vari[0] + "----");
   if (vari[0] == "0") {
+    imp("DESEA SOBREESCRIBIR", "# - SI", "* - NO", "");
     Serial.println("DESEA SOBREESCRIBIR");
     char k = teclado.getKey();
     while (k != '#' && k != '*') {
       k = teclado.getKey();
     }
+    imp("", "GRACIAS", "", "");
     if (k == '#') {
       f = "/AUIDRefO.php?Ref=" + ref + "&UID=" + uid;
       php(f);
+      if (vari[0] == "1"||vari[0] == "0") {
+        imp("", "REGISTRO EXITOSO!", "", "");
+        delay(800);
+      } else {
+        imp("", "PROBLEMA EN SERVIDOR", "", "");
+        delay(800);
+      }
     } else {
       return;
     }
   } else if (vari[0] == "3") {
+    advertencia("EL ITEM NO EXISTE");
     Serial.println("EL ITEM NO EXISTE");
+  } else if (vari[0] == "1") {
+    imp("", "REGISTRO EXITOSO!", "", "");
+    delay(800);
+  } else {
+    imp("", "PROBLEMA EN SERVIDOR", "", "");
+    delay(800);
   }
 }
 
 void prestamos(int p) {
-  imp("PONGA SU CARNÉ", "", "", "");
+  imp("", "PONGA SU CARNE", "", "");
   Serial.println("PONGA SU CARNÉ");
   String uid = UID(tiempo);
   if (uid == "tiempoAgotado") {
+    advertencia("TIEMPO AGOTADO...");
     Serial.println("TIEMPO AGOTADO");
     return;
   }
+  imp("", "GRACIAS", "", "");
   Serial.println(uid);
   String f = "/EDocNomxUID.php?UID=";
   uid = espaciosurl(uid);
@@ -271,43 +368,63 @@ void prestamos(int p) {
   php(f + uid);
   String doc = vari[0];
   if (doc == "0") {
+    advertencia("EL USUARIO NO EXISTE");
     Serial.println("EL USUARIO NO EXISTE");
     return;
   }
+  imp("USUARIO", vari[1], "", "");
+  delay(500);
   String nom = vari[1];
   Serial.println(doc);
   Serial.println(nom);
+  imp("", "PONGA TAG DEL ITEM", "", "");
   Serial.println("PONGA EL ITEM:");
   uid = UID(tiempo);
   if (uid == "tiempoAgotado") {
+    advertencia("TIEMPO AGOTADO...");
     Serial.println("TIEMPO AGOTADO");
     return;
   }
+  imp("", "GRACIAS", "", "");
   f = "/ERefNomxUID.php?UID=";
   uid = espaciosurl(uid);
   Serial.println(f + uid);
   php(f + uid);
   String ref = vari[0];
   if (ref == "0") {
+    advertencia("EL ITEM NO EXISTE");
     Serial.println("EL ITEM NO EXISTE");
     return;
   }
+  imp("", "ITEM: " + vari[1], "", "");
+  delay(500);
   String nomr = vari[1];
-  Serial.println("Ingrese cantidad:");
-  String cant = secNum(0, 0);
+  imp("INGRESE LA CANTIDAD", "", "# - CONTINUAR", "B - BORRAR");
+  Serial.println("INGRESE LA CANTIDAD");
+  String cant = secNum(4, 1);
+  imp("", "GRACIAS", "", "");
   f = "/APrest.php?Doc=" + doc + "&Ref=" + ref + "&Cant=" + cant + "&Prest=" + p;
   Serial.println(f);
   php(f);
+  if (vari[0] == "1"||vari[0] == "0") {
+        imp("", "REGISTRO EXITOSO!", "", "");
+        delay(800);
+      } else {
+        imp("", "PROBLEMA EN SERVIDOR", "", "");
+        delay(800);
+      }
   return;
 }
 void listaPrestamosP() {
-  imp("PONGA SU CARNÉ", "", "", "");
+  imp("", "PONGA SU CARNE", "", "");
   Serial.println("PONGA SU CARNÉ");
   String uid = UID(tiempo);
   if (uid == "tiempoAgotado") {
+    advertencia("TIEMPO AGOTADO...");
     Serial.println("TIEMPO AGOTADO");
     return;
   }
+  imp("", "GRACIAS", "", "");
   Serial.println(uid);
   String f = "/EDocNomxUID.php?UID=";
   uid = espaciosurl(uid);
@@ -315,21 +432,25 @@ void listaPrestamosP() {
   php(f + uid);
   String doc = vari[0];
   if (doc == "0") {
+    advertencia("EL USUARIO NO EXISTE");
     Serial.println("EL USUARIO NO EXISTE");
     return;
   }
+  imp("USUARIO", vari[1], "", "");
   f = "/EPrestxDoc.php?Doc=" + doc;
   Serial.println(f);
   php(f);
 }
 void listaPrestamosI() {
-  imp("PONGA SU CARNÉ", "", "", "");
-  Serial.println("PONGA EL TAG");
+  imp("", "PONGA TAG DEL ITEM", "", "");
+  Serial.println("PONGA TAG DEL ITEM");
   String uid = UID(tiempo);
   if (uid == "tiempoAgotado") {
+    advertencia("TIEMPO AGOTADO...");
     Serial.println("TIEMPO AGOTADO");
     return;
   }
+  imp("", "GRACIAS", "", "");
   Serial.println(uid);
   String f = "/ERefNomxUID.php?UID=";
   uid = espaciosurl(uid);
@@ -337,9 +458,11 @@ void listaPrestamosI() {
   php(f + uid);
   String ref = vari[0];
   if (ref == "0") {
+    advertencia("EL ITEM NO EXISTE");
     Serial.println("EL ITEM NO EXISTE");
     return;
   }
+  imp("", "ITEM: " + vari[1], "", "");
   f = "/EPrestxRef.php?Ref=" + ref;
   Serial.println(f);
   php(f);
