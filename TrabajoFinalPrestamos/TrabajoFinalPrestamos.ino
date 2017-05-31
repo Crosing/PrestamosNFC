@@ -10,10 +10,11 @@
   RST             D49
   3.3V            3.3V
 */
+#include <Wire.h>
+#include <LiquidCrystal_I2C.h>
 #include <SPI.h>
 #include <MFRC522.h>
 #include <Ethernet.h>
-#include <LiquidCrystal.h>
 #include <Keypad.h>
 //Definicion de variables y constantes
 const byte filas = 4;                    //define las 4 filas del teclado
@@ -28,7 +29,7 @@ char teclas[filas][columnas] =           //inicializa filas y columnas
 byte pinesfilas[filas] = {2, 3, 4, 5}; //defines los pines digitales de las cuatro fila
 byte pinescolumnas[columnas] = {6, 7, 8, 9}; //defines los pines digitales de las tres columnas
 Keypad teclado = Keypad( makeKeymap(teclas), pinesfilas,  pinescolumnas, filas, columnas );
-LiquidCrystal lcd(44, 43, 42, 41, 40, 39); //Inicializa la libreria y define los pines digitales para el LCD
+LiquidCrystal_I2C lcd(0x27, 2, 1, 0, 4, 5, 6, 7, 3, POSITIVE);
 int t = 0;
 String vari[10];
 int tiempo = 10000;
@@ -91,11 +92,7 @@ void loop() {
 }
 
 void bienvenida() {
-  lcd.clear();
-  lcd.setCursor(3, 0);                //Ubica el cursor en la fila 7 de la columna 0
-  lcd.print("SISTEMA DE");               //Muestra el mensaje "GUIA EN"
-  lcd.setCursor(3, 1);                //Ubica el cursor en la fila 7 de la columna 1
-  lcd.print("PRESTAMOS");
+  imp("", "SISTEMA DE PRESTAMOS", "", "");
 }
 
 void php(String funcion) {
@@ -132,21 +129,23 @@ void php(String funcion) {
       while (c != '}') {
         c = client.read();
         if (c == '(') {
+          aux = "";
           while (c != ')') {
             c = client.read();
+            //Serial.print(c);
             aux = aux + c;
           }
           aux.replace(")", "");
-          if (cont % 2) {
-            Serial.println(aux + " ");
-            cont++;
-          } else {
-            Serial.print(aux + " ");
-            cont++;
-          }
-          aux = "";
+          aux.replace(".", " ");
+
+          if (cont % 4 == 0) lcd.clear();
+          lcd.setCursor(0, cont % 4);
+          lcd.print(aux);
+          if (cont % 4 == 3) delay(2000);
+          cont++;
         }
       }
+      if (cont % 4 != 3) delay(2000);
     }
     Serial.print(c);
   }
@@ -203,7 +202,7 @@ void asignarP() {
   }
   uid = espaciosurl(uid);
   Serial.println("INGRESE LA CÉDULA");
-  String ced = secNum();
+  String ced = secNum(0, 0);
   String f = "/AUIDDoc.php?Doc=" + ced + "&UID=" + uid;
   Serial.println(f);
   php(f);
@@ -235,7 +234,7 @@ void asignarI() {
   }
   uid = espaciosurl(uid);
   Serial.println("INGRESE LA REFERENCIA");
-  String ref = secNum();
+  String ref = secNum(0, 0);
   String f = "/AUIDRef.php?Ref=" + ref + "&UID=" + uid;
   Serial.println(f);
   php(f);
@@ -295,7 +294,7 @@ void prestamos(int p) {
   }
   String nomr = vari[1];
   Serial.println("Ingrese cantidad:");
-  String cant = secNum();
+  String cant = secNum(0, 0);
   f = "/APrest.php?Doc=" + doc + "&Ref=" + ref + "&Cant=" + cant + "&Prest=" + p;
   Serial.println(f);
   php(f);
@@ -376,8 +375,8 @@ void spiSelect(int CS) {
   digitalWrite(CS, LOW);
 }
 
-String secNum() {
-  char k;//
+String secNum(int row, int col) {
+  char k;
   char num[20];
   int i = 0;
   k = teclado.getKey();
@@ -392,12 +391,17 @@ String secNum() {
         Serial.print(k);
         salir = true;
       } else if (k == 'B') {
+
         if (i > 0) {
           i--;
+          lcd.setCursor(row + i, col);
+          lcd.print(" ");
         }
         k = teclado.getKey();
       } else {
         Serial.print(k);
+        lcd.setCursor(row + i, col);
+        lcd.print(k);
         num[i] = k;
         i++;
         k = teclado.getKey();
